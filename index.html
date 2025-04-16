@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Tesouro & Ise</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Comic Sans MS', cursive, sans-serif;
+      background: linear-gradient(to bottom, #ffe6e6, #ffffff);
+      overflow-x: hidden;
+    }
+    .center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+    }
+    .senha, .quiz, .roleta, .contador {
+      display: none;
+    }
+    .heart {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: red;
+      transform: rotate(45deg);
+      animation: fall 5s linear infinite;
+      opacity: 0.7;
+    }
+    .heart:before,
+    .heart:after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background: red;
+      border-radius: 50%;
+    }
+    .heart:before {
+      top: -10px;
+      left: 0;
+    }
+    .heart:after {
+      left: -10px;
+      top: 0;
+    }
+    @keyframes fall {
+      0% { top: -10%; left: calc(100% * var(--i)); }
+      100% { top: 110%; left: calc(100% * var(--i)); }
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      font-size: 18px;
+      border: none;
+      border-radius: 10px;
+      background: #ff6699;
+      color: white;
+      cursor: pointer;
+    }
+    .quiz button {
+      display: block;
+      margin: 10px auto;
+    }
+    .feedback {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+    #roletaCanvas {
+      border: 5px solid #ff99cc;
+      border-radius: 50%;
+      background: white;
+    }
+  </style>
+</head>
+<body>
+<div class="senha center">
+  <h1>Digite a senha do nosso amor</h1>
+  <input type="password" id="senhaInput" placeholder="Senha mágica...">
+  <button onclick="verificarSenha()">Entrar</button>
+</div>
+
+<div class="contador center">
+  <h2>Estamos juntos há:</h2>
+  <div id="contadorDias"></div>
+</div>
+
+<div class="quiz center">
+  <h2 id="pergunta">Carregando...</h2>
+  <div id="opcoes"></div>
+  <div class="feedback" id="feedback"></div>
+  <button onclick="proximaPergunta()">Próxima</button>
+</div>
+
+<div class="roleta center">
+  <h2>Roleta dos Desejos</h2>
+  <canvas id="roletaCanvas" width="300" height="300"></canvas><br>
+  <button onclick="girarRoleta()">Girar</button>
+  <div id="premio"></div>
+</div>
+
+<script>
+  const senhaCorreta = "talisman";
+  const inicioRelacionamento = new Date("2022-06-10");
+  const perguntas = [
+    {
+      pergunta: "Qual foi nossa primeira viagem juntos?",
+      opcoes: ["Paris", "Coreia", "Marte (se tivéssemos foguete)", "Ficamos em casa vendo Netflix", "Você não me levou ainda! 😠"],
+      correta: 4,
+      explicacao: "Você prometeu e não levou até hoje!"
+    },
+    {
+      pergunta: "O que eu sempre roubo da sua geladeira?",
+      opcoes: ["Refrigerante", "Chocolate", "Seu coração (que clichê, amor)", "Até a geladeira eu levaria se coubesse no carro", "Nada, você é educado (mentira)"],
+      correta: 4,
+      explicacao: "Você sempre diz que não rouba, mas a geladeira sabe!"
+    },
+    {
+      pergunta: "Qual meu apelido mais ridículo para você?",
+      opcoes: ["Isecake", "Meu Pudim", "4 olho", "bebê", "Dumbo"],
+      correta: 4,
+      explicacao: "Você odeia quando te chamo assim, mas eu amo!"
+    },
+    {
+      pergunta: "O que eu mais reclamo?",
+      opcoes: ["Você demorar pra responder", "O calor do inferno", "Que a saudade ta grande", "Que o One Piece não acaba", "Do Ted (brincadeira)"] ,
+      correta: 2,
+      explicacao: "Saudade é fogo, né amor?"
+    },
+    {
+      pergunta: "Qual filme vimos 3x no mesmo mês?",
+      opcoes: ["Titanic", "Como Se Fosse a Primeira Vez", "Velozes & Furiosos 27", "Aquele que você dormiu", "Nenhum, QUERO AGORA"],
+      correta: 4,
+      explicacao: "Tá na hora de repetir a dose, né?"
+    },
+    {
+      pergunta: "O que eu sempre esqueço de fazer?",
+      opcoes: ["Ligar quando chego", "Respirar sem você", "Pagar o cartão", "Que odeio abacaxi", "Que você existe"],
+      correta: 0,
+      explicacao: "Prometo melhorar nisso, juro!"
+    },
+    {
+      pergunta: "O que já te dei de aleatório?",
+      opcoes: ["Um abraço", "Pote de glitter", "Concha com nosso nome", "Bilhete na banana", "Nada, sou mão de vaca"],
+      correta: 2,
+      explicacao: "Essa concha é nosso tesouro!"
+    },
+    {
+      pergunta: "O que falo que você nunca acredita?",
+      opcoes: ["Já estou chegando", "Dessa vez vou dormir cedo", "Não vou comer doce", "Deixa que eu pago", "Você tá linda assim mesmo"],
+      correta: 0,
+      explicacao: "Mas eu juro que saí de casa quando falei!"
+    },
+    {
+      pergunta: "O que eu amo na nossa rotina?",
+      opcoes: ["Ligações madrugada", "Você faz café", "Reclamar juntos", "Ouvir BTS forçado", "Nada, rotina é chata"],
+      correta: 0,
+      explicacao: "Essas ligações salvam meu dia!"
+    },
+    {
+      pergunta: "Complete: Eu te amo mais que...",
+      opcoes: ["Pão de queijo ama o queijo", "Bruno Mars ama funk", "Chuck Norris ama chutar", "TUDO nesse universo", "O Ted me ama"],
+      correta: 3,
+      explicacao: "Amor de outro universo!"
+    }
+  ];
+  const premios = [
+    "Vale 1 presente surpresa", "Pode me fazer cócegas por 1 minuto", "Carta de amor escrita por mim", 
+    "Meu chocolate preferido é seu", "Eu durmo do seu lado hoje", "Escolhe o filme (até terror!)", 
+    "Vale 1 segredo meu que você não sabe", "Pizza + Netflix sem reclamações", "Danço até música ruim por você", 
+    "Te amo do tamanho do universo (de novo)"
+  ];
+  let perguntaAtual = 0;
+
+  document.querySelector('.senha').style.display = 'flex';
+  criarCorações();
+
+  function verificarSenha() {
+    const senha = document.getElementById('senhaInput').value;
+    if (senha.toLowerCase() === senhaCorreta) {
+      document.querySelector('.senha').style.display = 'none';
+      document.querySelector('.contador').style.display = 'flex';
+      iniciarContador();
+      setTimeout(() => {
+        document.querySelector('.contador').style.display = 'none';
+        document.querySelector('.quiz').style.display = 'flex';
+        mostrarPergunta();
+      }, 5000);
+    } else {
+      alert('Senha errada! Tenta de novo, amor.');
+    }
+  }
+
+  function iniciarContador() {
+    const agora = new Date();
+    const diff = agora - inicioRelacionamento;
+    const dias = Math.floor(diff / (1000 * 60 * 60 * 24));
+    document.getElementById('contadorDias').textContent = dias + ' dias juntinhos!';
+  }
+
+  function mostrarPergunta() {
+    if (perguntaAtual >= perguntas.length) {
+      document.querySelector('.quiz').style.display = 'none';
+      document.querySelector('.roleta').style.display = 'flex';
+      return;
+    }
+    const p = perguntas[perguntaAtual];
+    document.getElementById('pergunta').textContent = p.pergunta;
+    const opcoesDiv = document.getElementById('opcoes');
+    opcoesDiv.innerHTML = '';
+    p.opcoes.forEach((op, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = op;
+      btn.onclick = () => verificarResposta(i);
+      opcoesDiv.appendChild(btn);
+    });
+  }
+
+  function verificarResposta(i) {
+    const correta = perguntas[perguntaAtual].correta;
+    const feedback = document.getElementById('feedback');
+    if (i === correta) {
+      feedback.innerHTML = 'Acertou! <3';
+    } else {
+      feedback.innerHTML = `Errou! Quase amor... Era: "${perguntas[perguntaAtual].opcoes[correta]}"<br>${perguntas[perguntaAtual].explicacao}`;
+    }
+  }
+
+  function proximaPergunta() {
+    perguntaAtual++;
+    mostrarPergunta();
+    document.getElementById('feedback').innerHTML = '';
+  }
+
+  function criarCorações() {
+    for (let i = 0; i < 20; i++) {
+      const heart = document.createElement('div');
+      heart.classList.add('heart');
+      heart.style.setProperty('--i', Math.random());
+      document.body.appendChild(heart);
+    }
+  }
+
+  function girarRoleta() {
+    const canvas = document.getElementById('roletaCanvas');
+    const ctx = canvas.getContext('2d');
+    const premio = premios[Math.floor(Math.random() * premios.length)];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.arc(150, 150, 140, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffccdd';
+    ctx.fill();
+    ctx.font = '16px sans-serif';
+    ctx.fillStyle = 'black';
+    ctx.fillText(premio, 50, 150);
+    document.getElementById('premio').innerHTML = `Parabéns! Você ganhou: <b>${premio}</b><br>Agora é lei – pode cobrar quando quiser! ❤`;
+  }
+</script>
+</body>
+</html>
+
